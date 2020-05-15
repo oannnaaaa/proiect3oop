@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <vector>
 
+#include <typeinfo>
+
+#include <set>
+#include <cassert>
+
 using namespace std;
 
 vector<float> defaultVector(){
@@ -26,28 +31,39 @@ protected:
 
 public:
 /// metoda statica de afisare a numarului de obiecte
-static void numarObiecte(){ cout<<"Numarul total de locuinte este: "<<n<<endl;}
+static int numarObiecte(){ return n; }
+
 
 ///Constructorul de initializare
 Locuinta()
 {
-        n++;
-        prenume_client="Default";
-        nume_client = "Default";
-        suprafata_utila=0;
-        discount = 0;
-        pret_inchiriere_m2 = 0;
+    n++;
+    prenume_client="Default";
+    nume_client = "Default";
+    suprafata_utila=0;
+    discount = 0;
+    pret_inchiriere_m2 = 0;
 }
 
 ///Constructorul parametrizat
 Locuinta(string prenume_client , string nume_client, float suprafata_utila, float discount, float pret_inchiriere_m2)
 {
-        n++;
-        this->prenume_client= prenume_client ;
-        this->nume_client = nume_client;
-        this->suprafata_utila = suprafata_utila;
-        this->discount = discount;
-        this->pret_inchiriere_m2= pret_inchiriere_m2;
+    n++;
+    this->prenume_client= prenume_client ;
+    this->nume_client = nume_client;
+    this->suprafata_utila = suprafata_utila;
+    try
+    {
+    if (discount<0 || discount >10)
+        throw this->discount;
+    }
+    catch (double x)
+    {
+        cout<<"Eroare in constructor,discountul trebuie sa fie intre 0-10%.\n";
+        exit(EXIT_FAILURE);
+    }
+    this->discount = discount;
+    this->pret_inchiriere_m2= pret_inchiriere_m2;
 }
 
 ///Constructorul de copiere
@@ -78,8 +94,6 @@ Locuinta(string prenume_client , string nume_client, float suprafata_utila, floa
     friend istream& operator>>(istream&, Locuinta&);
     virtual void citire(istream &in);
     virtual void afisare(ostream &out);
-
-
 };
 
 int Locuinta::n = 0;
@@ -95,19 +109,32 @@ void Locuinta::citire(istream &in)
     cout<<"Suprafata Utila: ";
     in>>suprafata_utila;
 
+    cout<<"Discountul trebuie sa fie cuprins intre 0% si 10%\n";
     cout<<"Discount: ";
     in>>discount;
 
-    cout<<"Pret Inchiriere pe metru patrat: ";
+    try
+    {
+        if (discount<0 || discount>10)
+            throw 1;
+    }
+    catch (int x)
+    {
+        cout<<"Eroare in setarea discountului, acesta trebuie sa fie cuprins intre 0 si 10%.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    cout<<"Pret Inchiriere pe metru patrat (Euro): ";
     in>>pret_inchiriere_m2;
 }
 
 void Locuinta::afisare(ostream &out){
     out<<"Prenume Client: "<<prenume_client<<"\n";
+    //out <<"Prenumele este de tipul: " << typeid(prenume_client).name() <<endl;
     out<<"Nume Client: "<<nume_client<<"\n";
     out<<"Suprafata Utila: "<<suprafata_utila<<"\n";
     out<<"Discount: "<<discount<<"\n";
-    out<<"Pret Inchiriere pe metru patrat: "<<pret_inchiriere_m2;
+    out<<"Pret Inchiriere pe metru patrat: "<<pret_inchiriere_m2<<"\n";
 }
 
 ///Constructorul de copiere
@@ -182,9 +209,12 @@ void afisare(ostream &out);
 float chirie( Apartament& t)
 {
     float chirie=0;
-     chirie= t.pret_inchiriere_m2 * t.suprafata_utila ;
-     //mai trebuie sa rezolvi treaba cu discountul
-
+    float pret_inc=t.pret_inchiriere_m2;
+    float dis=t.discount;
+    float suprafata=suprafata_utila;
+    chirie= pret_inc*suprafata ;
+    dis=chirie/10;
+    chirie=chirie-dis;
     return chirie;
 }
 
@@ -200,7 +230,7 @@ void Apartament::afisare(ostream &out){
     Locuinta::afisare(out);
     out<<"Apartamentul se afla la etajul: ";
     out<<nr_etaj<<"\n";
-    out<<"Pretul chiriei este: ";
+    out<<"Pretul chiriei este (Euro): ";
     out<<this->chirie(*this);
 }
 
@@ -284,9 +314,16 @@ void afisare(ostream &out);
 
 float chirie( Casa& t)
 {
-    int chirie=0;
-     //trebuie sa rezolvi pretul chiriei
-    return chirie;
+    float chirie=0, chiriecurte=0, chirietot=0;
+    float pret_inc=t.pret_inchiriere_m2, pret_inccurte=t.pret_inchiriere_curte_m2;
+    float dis=t.discount;
+    float suprafata=suprafata_utila,suprafatacurte=suprafata_curte;
+    chirie= pret_inc*suprafata ;
+    dis=chirie/10;
+    chirie=chirie-dis;
+    chiriecurte=pret_inccurte*suprafatacurte;
+    chirietot=chirie+chiriecurte;
+    return chirietot;
 }
 
 };
@@ -313,12 +350,13 @@ void Casa::citire(istream &in){
     cout<<"Cate etaje are casa? ";
     in>>nr_etaje;
     in.get();
-    for (int i=0;i<=nr_etaje;i++){
+    for (int i=0;i<=nr_etaje;i++)
+    {
         cout<<"Dati suprafata etajului "<<i<<": ";
         in>>etaj;
         etaje.push_back(etaj);
     }
-    cout<<"Care este pretul curtii pe metru patrat? ";
+    cout<<"Care este pretul curtii pe metru patrat (Euro)? ";
     in>>pret_inchiriere_curte_m2;
 }
 void Casa::afisare(ostream& out){
@@ -327,17 +365,21 @@ void Casa::afisare(ostream& out){
     out<<suprafata_curte<<"\n";
     out<<"Numarul de etaje al casei este: ";
     out<<nr_etaje<<"\n";
-    int n=nr_etaje;
+    int n=0;
 
     vector<float>::iterator i;
 
 	   for (i = etaje.begin(); i != etaje.end(); ++i)
-        out<<"Suprafata utila a etajului "<<n<<"este: "<<(*i)<<'\n';
+       {
+        out<<"Suprafata utila a etajului "<< n <<" este: "<< (*i)<<"\n";
+        n++;
+       }
 
+    out<<"Pretul curtii/m^2 este: ";
+    out<<pret_inchiriere_curte_m2<<"\n";
 
-
-    out<<"Pretul chiriei este: ";
-    out<<this->chirie(*this);
+    out<<"Pretul chiriei este (Euro): ";
+    out<<this->chirie(*this)<<"\n";
 }
 
 ///Constrcutor parametrizat
@@ -383,6 +425,143 @@ Casa& Casa::operator= (Casa& p)
     }
    return *this;
 }
+
+template <class t> class Gestiune
+{
+    t *v;
+    int nr;
+public:
+    Gestiune(t *p=NULL, int n=0)
+    {
+        nr=n;
+        if (n!=0){
+            v=new t[n];
+            for(int i=0;i<n;i++)
+            {
+                v[i]=p[i];
+            }
+        }
+    }
+    Gestiune(Gestiune &a)
+    {
+        nr=a.nr;
+        v=new t[nr];
+        for(int i=0;i<nr;i++)
+        {
+            v[i]=a.v[i];
+        }
+    }
+    ~Gestiune()
+    {
+        delete [] v;
+    }
+
+    int get_nr();
+    t get_v(int i) {return v[i];}
+    friend istream& operator >>(istream &in, Gestiune <t> &g)
+    {
+        cout<<"Introduceti numarul de locuinte inregistrate in baza de date a agentiei imobiliare: ";
+        in>>g.nr;
+        g.v=new t[g.nr];
+        cout<<"Introduceti datele: \n";
+        for(int i=0;i<g.nr;i++){
+           in>>g.v[i];
+           cout<<"\n";
+        }
+        return in;
+    }
+    friend ostream& operator <<(ostream &out, Gestiune<t> &g)
+    {
+        out<<"In agentia imobiliara se gasesc urmatoarele "<<g.nr<<" locuinte:"<<"\n";
+        for(int i=0;i<g.nr;i++)
+        {
+            out<<g.v[i]<<"\n";
+            out <<"Locuinta este de tipul: " << typeid(g).name() <<endl;
+        }
+        return out;
+    }
+    void operator+=(char* ob)
+    {
+        nr++;
+        v.push_back(ob);
+    }
+
+};
+
+template <class t> int Gestiune<t>::get_nr()
+{
+    return nr;
+}
+
+template <> class Gestiune <Casa>
+{
+    Casa* v;
+    int nr;
+    int nr_Case;
+public:
+    Gestiune(Casa *p=NULL, int n=0)
+    {
+        nr_Case=0;
+        nr=n;
+        v=new Casa[n];
+        for(int i=0;i<n;i++)
+        {
+            v[i]=p[i];
+            for (int j=0;j<v[i].numarObiecte();j++)
+                   {
+                     nr_Case+=1;
+                     break;
+                   }
+        }
+    }
+    Gestiune(Gestiune &a)
+    {
+        nr=a.nr;
+        nr_Case=0;
+        v=new Casa[nr];
+        for(int i=0;i<nr;i++)
+        {
+            v[i]=a.v[i];
+            for (int j=0;j<v[i].numarObiecte();j++)
+                    nr_Case+=1;
+        }
+    }
+    ~Gestiune()
+    {
+        delete [] v;
+    }
+
+    int get_nr() {return nr;}
+    Casa get_v(int i) {return v[i];}
+    friend istream& operator >>(istream &in, Gestiune <Casa> &g)
+    {
+        cout<<"Introduceti numarul de Case: ";
+        in>>g.nr;
+        g.v=new Casa[g.nr];
+        cout<<"Introduceti obiectele\n";
+        for(int i=0;i<g.nr;i++)
+        {
+            in>>g.v[i];
+            for (int j=0;j<g.v[i].numarObiecte();j++)
+                    {
+                        g.nr_Case+=1;
+                        break;
+                    }
+           cout<<"\n";
+        }
+        return in;
+    }
+    friend ostream& operator <<(ostream &out, Gestiune<Casa> &g)
+    {
+        out<<"In agentia imobiliara sunt "<<g.nr<<" case inregistrate.\n";
+        for(int i=0;i<g.nr;i++)
+            out<<g.v[i]<<"\n";
+
+        return out;
+    }
+
+};
+
 
 
 ///Functie cu care incepe programul(nu este metoda a vreunei clase)
@@ -434,7 +613,7 @@ int main()
 
         cout<<"\n\nDatele locuintelor au fost citite cu succes!\n\n";
 
-        _sleep(3000);  //asteapta 4 secunde
+       // _sleep(2000);  //asteapta 2 secunde
         system("cls"); // curata ecranul din consola
 
         int opt = 0;
@@ -443,12 +622,13 @@ int main()
         cout<<"\n-----------------MENIU-----------------\n\n";
         cout<<"\t 1. Afisati datele locuintelor;\n";
         cout<<"\t 2. Curatati ecranul. \n";
-        cout<<"\t 3. Iesiti din program. \n";
+        cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+        cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+        cout<<"\t 5. Contorizare locuinte. \n";
+        cout<<"\t 6. Iesiti din program. \n";
 
         while (opt != -1)
         {
-        if (opt == 1)
-        cout<<"\n  Introduceti optiunea dorita: \n  1 - afisati toate locuintele; \n  2 - curatati ecranul;\n  3 - inchideti programul; \n";
         cin >> opt;
 
             switch (opt)
@@ -460,8 +640,15 @@ int main()
                         for(int i=0;i<n;i++)
                             {
                             cout<<"\n Locuinta id: "<<i+1<<" \n"<<*loc[i]; ///afisez locuinta de pe pozitia i
-                            cout<<"--------------------------\n";
+                            cout<<"\n--------------------------\n";
                             }
+                            cout<<"\n-----------------MENIU-----------------\n\n";
+                            cout<<"\t 1. Afisati datele locuintelor;\n";
+                            cout<<"\t 2. Curatati ecranul. \n";
+                            cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+                            cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+                            cout<<"\t 5. Contorizare locuinte. \n";
+                            cout<<"\t 6. Iesiti din program. \n";
                     }
                     break;
 
@@ -471,22 +658,93 @@ int main()
                         cout<<"\n-----------------MENIU-----------------\n\n";
                         cout<<"\t 1. Afisati datele locuintelor;\n";
                         cout<<"\t 2. Curatati ecranul. \n";
-                        cout<<"\t 3. Iesiti din program. \n";
+                        cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+                        cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+                        cout<<"\t 5. Contorizare locuinte. \n";
+                        cout<<"\t 6. Iesiti din program. \n";
+
                     }
                     break;
                 case 3:
+                    {
+                    Gestiune <Casa> x;
+                    cin>>x;
+                    cout<<x<<"\n";
+                    cout<<"\n";
+                    cout<<"\n-----------------MENIU-----------------\n\n";
+                    cout<<"\t 1. Afisati datele locuintelor;\n";
+                    cout<<"\t 2. Curatati ecranul. \n";
+                    cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+                    cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+                    cout<<"\t 5. Contorizare locuinte. \n";
+                    cout<<"\t 6. Iesiti din program. \n";
+                    }
+                    break;
+                case 4:
+                    {
+                    Gestiune <Apartament> y;
+                    cin>>y;
+                    cout<<y;
+                    cout<<"\n";
+                    cout<<"\n-----------------MENIU-----------------\n\n";
+                    cout<<"\t 1. Afisati datele locuintelor;\n";
+                    cout<<"\t 2. Curatati ecranul. \n";
+                    cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+                    cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+                    cout<<"\t 5. Contorizare locuinte. \n";
+                    cout<<"\t 6. Iesiti din program. \n";
+                    }
+                    break;
+                case 5:
+                    {
+                            int N_case,N_apartamente;
+                            N_case=N_apartamente=0;
+                            if (n>0)
+                            {
+                                for(int i=0;i<n;i++)
+                                {
+                                ///incerc cast catre casa
+                                Casa *p1=dynamic_cast<Casa*>(loc[i]);
+                                ///incerc cast catre apartament
+                                Apartament *p2=dynamic_cast<Apartament*>(loc[i]);
+                                ///daca sunt nenuli atunci incrementez corespunzator
+                                if (p1)
+                                    N_case++;
+                                if (p2)
+                                    N_apartamente++;
+                                }
+                                cout<<"Numarul de case: "<<N_case<<"\n";
+                                cout<<"Numarul de apartamente: "<<N_apartamente<<"\n";
+                            }
+                            else
+                                {
+                                cout<<"Nu s-au citit date. Redeschideti programul si cititi datele.\n";
+                                }
+                            cout<<"\n-----------------MENIU-----------------\n\n";
+                            cout<<"\t 1. Afisati datele locuintelor;\n";
+                            cout<<"\t 2. Curatati ecranul. \n";
+                            cout<<"\t 3. Adauga case in baza de date a agentiei. \n";
+                            cout<<"\t 4. Adauga apartamente in baza de date a agentiei. \n";
+                            cout<<"\t 5. Contorizare locuinte. \n";
+                            cout<<"\t 6. Iesiti din program. \n";
+                    }
+                    break;
+                    case 6:
+                    {
+                    cout<<":)";
                     return 0;
+                    }
+
                 default:
                     cout<<"Ati ales o optiune invalida. \n";
-
-            }
         }
     }
-    catch (bad_alloc var){
+    }
+    catch (bad_alloc var)
+    {
         cout<<"Numarul introdus trebuie sa fie pozitiv. Bad Alloc!\n";
         exit(EXIT_FAILURE);
     }
-    return 0;
 
  return 0;
 }

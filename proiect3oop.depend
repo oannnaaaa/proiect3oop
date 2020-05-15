@@ -1,7 +1,10 @@
 # depslib dependency file v1.0
-1589124191 source:c:\users\oana\desktop\proiect3oop\main.cpp
+1589533763 source:c:\users\oana\desktop\proiect3oop\main.cpp
 	<iostream>
 	<string.h>
 	<stdlib.h>
 	<vector>
+	<typeinfo>
+	<set>
+	<cassert>
 
